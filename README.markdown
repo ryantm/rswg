@@ -6,8 +6,9 @@ RSWG
 Install
 ---
 
-
-
+    	git clone git://github.com/ryantm/rswg.git sitename
+        cd sitename
+        rake build
 
 License
 -------
