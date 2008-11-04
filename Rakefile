@@ -3,7 +3,6 @@ require 'ftools'
 
 require 'rubygems'
 require 'rake'
-require 'hpricot'
 require 'haml'
 require 'sass'
 require 'sass/plugin'
@@ -48,7 +47,7 @@ def build_page(src_loc, site_loc, local_page_url, locals={})
 
   layout = context.instance_variable_get(:@layout)
 
-  if layout.nil?
+  if layout.nil? and File.exists?("#{LAYOUTS_DIR}/default.haml")
     layout = "default"
   end
 
