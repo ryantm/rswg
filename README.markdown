@@ -22,6 +22,7 @@ Tutorial
 ---
 
 First we will make a webpage, edit `./src/pages/index.haml` and write:
+
         %h1 Hello World
 
 Then type `rake` to build your website. 
