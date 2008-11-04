@@ -37,6 +37,34 @@ Then type `rake` to build your website.
         $ cat ./site/index.html 
         <h1>Hello World</h1>
 
+Well that's pretty bland, and it doesn't have the fancy HTML markup it needs to survive validation. Let's add a layout to wrap around this. Edit `./src/layouts/default.haml` and write:
+
+        !!! STRICT
+        %html{:xmlns=>"http://www.w3.org/1999/xhtml", :lang=>"en"}
+          %head
+             %title My Title
+          %body
+            =yield
+
+Then type `rake` to build your website:
+
+        $ rake
+        (in /home/ryan/rswgtest)
+        Source last changed: Tue Nov 04 13:11:27 -0600 2008
+        Deleting ./site
+        Copying ./assets/. to ./site
+        ./src/pages/index.haml to ./site/index.html
+        Build took 0.002527 seconds.
+        $ cat ./site/index.html
+        <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+        <html lang='en' xmlns='http://www.w3.org/1999/xhtml'>
+          <head>
+            <title>My Title</title>
+          </head>
+          <body>
+            <h1>Hello World</h1>
+          </body>
+
 License
 -------
 
