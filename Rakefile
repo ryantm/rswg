@@ -14,9 +14,9 @@ DIRECTORIES << ASSET_DIR       = "./assets"
 DIRECTORIES << SOURCE_DIR      = "./src" 
 DIRECTORIES << MODEL_DIR       = "#{SOURCE_DIR}/models"
 DIRECTORIES << PAGES_DIR       = "#{SOURCE_DIR}/pages"
+DIRECTORIES << STYLESHEETS_DIR = "#{PAGES_DIR}/stylesheets"
 DIRECTORIES << PARTIALS_DIR    = "#{SOURCE_DIR}/partials"
 DIRECTORIES << LAYOUTS_DIR     = "#{SOURCE_DIR}/layouts"
-DIRECTORIES << STYLESHEETS_DIR = "#{SOURCE_DIR}/stylesheets"
 
 LAST_BUILT = "./lastbuilt"
 
@@ -117,8 +117,8 @@ module Extensions
     haml("%link{:href=>'#{dot_dot+"stylesheets/#{name}.css"}', :media=>'screen', :rel=>'stylesheet', :type=>'text/css'}/")
   end
 
-  def use_model(name)
-    instance_variable_set("@#{name}", YAML::load_file("#{MODEL_DIR}/#{name}.yaml"))
+  def model(name)
+    YAML::load_file("#{MODEL_DIR}/#{name}.yaml")
   end
 
 end
@@ -134,14 +134,14 @@ task :default => :build
 task :build do
   start_time = Time.now
 
-  File.makedirs(*DIRECTORIES)
-
   latest_modification_time = Dir["Rakefile", "#{SOURCE_DIR}/*", "#{SOURCE_DIR}/**/*", "#{ASSET_DIR}/*", "#{ASSET_DIR}/**/*"].map{|path| File.mtime(path)}.sort.reverse.first
 
-  if File.exists?(LAST_BUILT) and File.mtime(LAST_BUILT) > latest_modification_time
+  if File.exists?(SITE_DIR) and File.exists?(LAST_BUILT) and File.mtime(LAST_BUILT) > latest_modification_time
     puts "Source unchanged since last build."
     exit(0)
   end
+
+  File.makedirs(*DIRECTORIES)
 
   puts "Source last changed: #{latest_modification_time}"
 
@@ -151,63 +151,51 @@ task :build do
   puts "Copying #{ASSET_DIR}/. to #{SITE_DIR}"
   FileUtils.cp_r "#{ASSET_DIR}/.", SITE_DIR
 
-  pages =  Dir["#{PAGES_DIR}/**/*.haml", "#{PAGES_DIR}/*.haml"]
+  pages =  Dir["#{PAGES_DIR}/**/*.*", "#{PAGES_DIR}/*.*"]
   pages.each do |page_path|
-    local_page_url = page_path.split("/").drop(3).join("/").chomp(".haml")
-    unless local_page_url.include?(".")
-      local_page_url += ".html"
-    end
-    site_loc = "#{SITE_DIR}/#{local_page_url}"
-    next if should_skip?(page_path, site_loc, latest_modification_time)
+    ext = File.extname(page_path)
+    local_page_url = page_path.split("/").drop(3).join("/").chomp!(ext)
+    case ext
+    when ".haml"
+      local_page_url += ".html" unless File.basename(local_page_url).include?(".")
+      site_loc = "#{SITE_DIR}/#{local_page_url}"
+      next if should_skip?(page_path, site_loc, latest_modification_time)
+      build_page(page_path, site_loc, local_page_url)
+    when ".sass"
+      local_page_url += ".css" unless File.basename(local_page_url).include?(".")
+      site_loc = "#{SITE_DIR}/#{local_page_url}"
+      next if should_skip?(page_path, site_loc, latest_modification_time)
 
-    build_page(page_path, site_loc, local_page_url)
-  end
+      context = extended_context(page_path.split("/").size - 4)
+      puts site_loc
+      file_write(site_loc, sass(File.read(page_path), context, {}, {:filename=>page_path}))
+    when ".hatl"
+      printed_template_path = false
+      model_name = File.basename(page_path, ".hatl")
 
-  template_pages = Dir["#{PAGES_DIR}/**/*.hatl", "#{PAGES_DIR}/*.hatl"]
-  printed_template_path = false
-  template_pages.each do |template_path|
-    model_name = File.basename(template_path, ".hatl")
-    if model_name[-5..-1] == "-html"
-      model_name = model_name[0...-5]
-      output = :html
-    else
-      output = :directory
-    end
-    model = YAML::load_file("#{MODEL_DIR}/#{model_name}.yaml")
+      model = YAML::load_file("#{MODEL_DIR}/#{model_name}.yaml")
 
-    model.each do |page_info|
-      if page_info["path"]
-        if output == :directory
-          local_page_url = File.dirname(template_path).split("/").drop(3).join("/") + "/#{page_info["path"]}/index.html"
+      model.each do |page_info|
+        if page_info["path"]
+          local_page_url = File.dirname(page_path).split("/").drop(3).join("/") + "/#{page_info["path"]}/index.html"
+          site_loc = "#{SITE_DIR}/#{local_page_url}"
+          next if should_skip?(page_path, site_loc, latest_modification_time)
+
+          if !printed_template_path
+            puts page_path
+            printed_template_path = true
+          end
+          puts "  " + site_loc
+
+          build_page(page_path, site_loc, local_page_url, page_info)
         else
-          local_page_url = File.dirname(template_path).split("/").drop(3).join("/") + "/#{page_info["path"]}.html"
+          puts "unspecified path for #{page_info.inspect} in #{model_name}.yaml"
         end
-        site_loc = "#{SITE_DIR}/#{local_page_url}"
-        next if should_skip?(template_path, site_loc, latest_modification_time)
-
-        if !printed_template_path
-          puts template_path
-          printed_template_path = true
-        end
-        puts "  " + site_loc
-        build_page(template_path, site_loc, local_page_url, page_info)
-      else
-        puts "unspecified path for #{page_info.inspect} in #{model_name}.yaml"
       end
+    else
+      puts "no processor for #{page_path}"
     end
 
-  end
-
-  stylesheets =  Dir.glob("#{STYLESHEETS_DIR}/*.sass")
-  stylesheets.each do |stylesheet|
-    site_loc = "#{SITE_DIR}/#{stylesheet.split("/")[2..-1].join("/").chomp(".sass")+'.css'}"
-    next if should_skip?(stylesheet, site_loc, latest_modification_time)
-
-    context = extended_context(stylesheet.split("/").size - 4)
-
-    final_result = sass(File.read(stylesheet), context, {}, {:filename=>stylesheet})
-    puts site_loc
-    file_write(site_loc, final_result)
   end
 
   puts "Build took #{Time.now-start_time} seconds."

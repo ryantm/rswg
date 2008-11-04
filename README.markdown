@@ -1,7 +1,13 @@
 RSWG
 ---
 
-The purpose of [RSWG](http://github.com/ryantm/rswg/) is to provide one Rakefile that can generate most static websites. It's goal is to solve general static website generation problems in one readable file. Ideally a person using RSWG would first read the Rakefile from top to bottom to understand exactly how the website generator works.
+[RSWG](http://github.com/ryantm/rswg/) is a fully functional static website generator delivered to you in a single Rakefile. At around 200 lines of Ruby, it's easy to read and modify for your own purposes.
+
+Install
+---
+
+
+
 
 License
 -------
