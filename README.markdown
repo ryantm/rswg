@@ -3,12 +3,29 @@ RSWG
 
 [RSWG](http://github.com/ryantm/rswg/) is a fully functional static website generator delivered to you in a single Rakefile. At around 200 lines of Ruby, it's easy to read and modify for your own purposes.
 
+Features
+---
+* Haml templating
+* Layouts
+* Partials
+* Template Pages (.hatl files)
+* YAML based models
+
 Install
 ---
         gem install rake haml sass
     	git clone git://github.com/ryantm/rswg.git sitename
         cd sitename
-        rake build
+        rake
+
+Tutorial
+---
+
+First we will make a webpage, edit `./src/pages/index.haml` and write:
+       %h1 Hello World
+Then type `rake` to build your website. 
+
+
 
 License
 -------
