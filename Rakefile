@@ -3,26 +3,22 @@ require 'ftools'
 
 require 'rubygems'
 require 'rake'
+require 'hpricot'
 require 'haml'
 require 'sass'
 require 'sass/plugin'
 
-require 'hpricot'
+DIRECTORIES = []
+DIRECTORIES << SITE_DIR        = "./site"
+DIRECTORIES << ASSET_DIR       = "./assets"
+DIRECTORIES << SOURCE_DIR      = "./src" 
+DIRECTORIES << MODEL_DIR       = "#{SOURCE_DIR}/models"
+DIRECTORIES << PAGES_DIR       = "#{SOURCE_DIR}/pages"
+DIRECTORIES << PARTIALS_DIR    = "#{SOURCE_DIR}/partials"
+DIRECTORIES << LAYOUTS_DIR     = "#{SOURCE_DIR}/layouts"
+DIRECTORIES << STYLESHEETS_DIR = "#{SOURCE_DIR}/stylesheets"
 
-SITE_DIR   = "./site"
-ASSET_DIR   = "./assets"
-
-SOURCE_DIR = "./src"
-MODEL_DIR  = "#{SOURCE_DIR}/models"
-PAGES_DIR  = "#{SOURCE_DIR}/pages"
-PARTIALS_DIR  = "#{SOURCE_DIR}/partials"
-LAYOUTS_DIR  = "#{SOURCE_DIR}/layouts"
-STYLESHEETS_DIR  = "#{SOURCE_DIR}/stylesheets"
-
-
-
-
-task :default => :build
+LAST_BUILT = "./lastbuilt"
 
 def file_write(path, data)
   File.makedirs(File.dirname(path))
@@ -97,9 +93,9 @@ module Extensions
 
   def image_tag(url, opts={})
     if url.index("http://") == 0
-      src = url
+      src = url.strip
     else
-      src = dot_dot+"images/#{url}"
+      src = dot_dot+"images/#{url.strip}"
     end
     hash = {:src=>src}.merge(opts).inspect
     haml("%img#{hash}/")
@@ -134,18 +130,26 @@ def extended_context(nesting)
 end
 
 desc "Build the site"
+task :default => :build
 task :build do
   start_time = Time.now
+
+  File.makedirs(*DIRECTORIES)
+
   latest_modification_time = Dir["Rakefile", "#{SOURCE_DIR}/*", "#{SOURCE_DIR}/**/*", "#{ASSET_DIR}/*", "#{ASSET_DIR}/**/*"].map{|path| File.mtime(path)}.sort.reverse.first
+
+  if File.exists?(LAST_BUILT) and File.mtime(LAST_BUILT) > latest_modification_time
+    puts "Source unchanged since last build."
+    exit(0)
+  end
 
   puts "Source last changed: #{latest_modification_time}"
 
-  puts
+  puts "Deleting #{SITE_DIR}"
+  File.safe_unlink(SITE_DIR)
 
-  puts "copying #{ASSET_DIR} to #{SITE_DIR}"
+  puts "Copying #{ASSET_DIR}/. to #{SITE_DIR}"
   FileUtils.cp_r "#{ASSET_DIR}/.", SITE_DIR
-
-  puts
 
   pages =  Dir["#{PAGES_DIR}/**/*.haml", "#{PAGES_DIR}/*.haml"]
   pages.each do |page_path|
@@ -158,8 +162,6 @@ task :build do
 
     build_page(page_path, site_loc, local_page_url)
   end
-
-  puts
 
   template_pages = Dir["#{PAGES_DIR}/**/*.hatl", "#{PAGES_DIR}/*.hatl"]
   printed_template_path = false
@@ -196,21 +198,20 @@ task :build do
 
   end
 
-  pages =  Dir.glob("#{STYLESHEETS_DIR}/*.sass")
-  pages.each do |page|
-    site_loc = "#{SITE_DIR}/#{page.split("/")[2..-1].join("/").chomp(".sass")+'.css'}"
-    next if should_skip?(page, site_loc, latest_modification_time)
+  stylesheets =  Dir.glob("#{STYLESHEETS_DIR}/*.sass")
+  stylesheets.each do |stylesheet|
+    site_loc = "#{SITE_DIR}/#{stylesheet.split("/")[2..-1].join("/").chomp(".sass")+'.css'}"
+    next if should_skip?(stylesheet, site_loc, latest_modification_time)
 
-    context = extended_context(page.split("/").size - 4)
+    context = extended_context(stylesheet.split("/").size - 4)
 
-    final_result = sass(File.read(page), context, {}, {:filename=>page})
+    final_result = sass(File.read(stylesheet), context, {}, {:filename=>stylesheet})
     puts site_loc
     file_write(site_loc, final_result)
   end
 
-  puts
-
   puts "Build took #{Time.now-start_time} seconds."
+  FileUtils.touch(LAST_BUILT)
 end
 
 desc "Update the server"
