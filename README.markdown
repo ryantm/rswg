@@ -27,7 +27,15 @@ First we will make a webpage, edit `./src/pages/index.haml` and write:
 
 Then type `rake` to build your website. 
 
-
+        $ rake
+        (in /home/ryan/rswgtest)
+        Source last changed: Tue Nov 04 12:55:06 -0600 2008
+        Deleting ./site
+        Copying ./assets/. to ./site
+        ./src/pages/index.haml to ./site/index.html
+        Build took 0.00149 seconds.
+        $ cat ./site/index.html 
+        <h1>Hello World</h1>
 
 License
 -------
