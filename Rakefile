@@ -1,5 +1,5 @@
 require 'yaml'
-require 'ftools'
+require 'fileutils'
 
 require 'rubygems'
 require 'rake'
@@ -20,7 +20,7 @@ DIRECTORIES << LAYOUTS_DIR     = "#{SOURCE_DIR}/layouts"
 LAST_BUILT = "./lastbuilt"
 
 def file_write(path, data)
-  File.makedirs(File.dirname(path))
+  FileUtils.makedirs(File.dirname(path))
   File.open(path, "w") { |f|  f << data}
 end
 
@@ -36,6 +36,15 @@ end
 
 def sass(string, context=Object.new, locals={},options={}, &yield_block)
   Sass::Engine.new(string, options).render.chomp
+end
+
+module Haml::Filters::EP
+  include Haml::Filters::Base
+
+  def render(text)
+    Haml::Helpers.preserve Haml::Helpers.html_escape(text)
+  end
+
 end
 
 def build_page(src_loc, site_loc, local_page_url, locals={})
@@ -74,6 +83,10 @@ end
 module Extensions
 
   attr_accessor :nesting
+
+  def email
+    haml('%a{:href=>"mailto:&#114;y&#97;&#110;&#64;&#114;&#121;a&#110;&#116;&#109;&#46;&#99;&#111;&#109;"} &#114;y&#97;&#110;&#64;&#114;&#121;a&#110;&#116;&#109;&#46;&#99;&#111;&#109;')
+  end
 
   def dot_dot
     "../"*nesting
@@ -134,18 +147,18 @@ task :build do
   start_time = Time.now
 
   latest_modification_time = Dir["Rakefile", "#{SOURCE_DIR}/*", "#{SOURCE_DIR}/**/*", "#{ASSET_DIR}/*", "#{ASSET_DIR}/**/*"].map{|path| File.mtime(path)}.sort.reverse.first
-
+  puts latest_modification_time.inspect
   if File.exists?(SITE_DIR) and File.exists?(LAST_BUILT) and File.mtime(LAST_BUILT) > latest_modification_time
     puts "Source unchanged since last build."
     exit(0)
   end
 
-  File.makedirs(*DIRECTORIES)
+  FileUtils.makedirs(DIRECTORIES)
 
   puts "Source last changed: #{latest_modification_time}"
 
   puts "Deleting #{SITE_DIR}"
-  File.safe_unlink(SITE_DIR)
+  FileUtils.safe_unlink(SITE_DIR)
 
   puts "Copying #{ASSET_DIR}/. to #{SITE_DIR}"
   FileUtils.cp_r "#{ASSET_DIR}/.", SITE_DIR
@@ -203,6 +216,8 @@ end
 
 desc "Update the server"
 task :update do
+  puts "Saving revision history"
+  system "git commit -a"
   puts "rsyncing"
   system "rsync -avz #{SITE_DIR}/. nfs:/home/public"
 end
@@ -210,7 +225,7 @@ end
 desc "Run the Buld task every 1 second CTRL-C or CTRL-Break (Windows) to stop."
 task :preview do
   while true do
-    `rake build --trace`
+    puts `rake build --trace`
     sleep 1
   end
 end
