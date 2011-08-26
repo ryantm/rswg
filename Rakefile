@@ -40,6 +40,15 @@ def sass(string, context=Object.new, locals={},options={}, &yield_block)
   Sass::Engine.new(string, options).render.chomp
 end
 
+module Haml::Filters::EP
+  include Haml::Filters::Base
+
+  def render(text)
+    Haml::Helpers.preserve Haml::Helpers.html_escape(text)
+  end
+
+end
+
 def build_page(src_loc, site_loc, local_page_url, locals={})
   context = extended_context(site_loc.split("/").size - 3)
   locals  = locals.merge({:url => local_page_url}) unless locals.has_key? :url
@@ -76,6 +85,10 @@ end
 module Extensions
 
   attr_accessor :nesting
+
+  def email
+    haml('%a{:href=>"mailto:&#114;y&#97;&#110;&#64;&#114;&#121;a&#110;&#116;&#109;&#46;&#99;&#111;&#109;"} &#114;y&#97;&#110;&#64;&#114;&#121;a&#110;&#116;&#109;&#46;&#99;&#111;&#109;')
+  end
 
   def dot_dot
     "../"*nesting
@@ -136,7 +149,7 @@ task :build do
   start_time = Time.now
 
   latest_modification_time = Dir["Rakefile", "#{SOURCE_DIR}/*", "#{SOURCE_DIR}/**/*", "#{ASSET_DIR}/*", "#{ASSET_DIR}/**/*"].map{|path| File.mtime(path)}.sort.reverse.first
-
+  puts latest_modification_time.inspect
   if File.exists?(SITE_DIR) and File.exists?(LAST_BUILT) and File.mtime(LAST_BUILT) > latest_modification_time
     puts "Source unchanged since last build."
     exit(0)
@@ -205,6 +218,8 @@ end
 
 desc "Update the server"
 task :update do
+  puts "Saving revision history"
+  system "git commit -a"
   puts "rsyncing"
   system "rsync -avz #{SITE_DIR}/. nfs:/home/public"
 end
@@ -212,7 +227,7 @@ end
 desc "Run the Buld task every 1 second CTRL-C or CTRL-Break (Windows) to stop."
 task :preview do
   while true do
-    `rake build --trace`
+    puts `rake build --trace`
     sleep 1
   end
 end
