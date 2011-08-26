@@ -1,8 +1,10 @@
+
 require 'yaml'
-require 'ftools'
+require 'fileutils'
 
 require 'rubygems'
-require 'rake'
+require 'bundler/setup'
+
 require 'haml'
 require 'sass'
 require 'sass/plugin'
@@ -20,7 +22,7 @@ DIRECTORIES << LAYOUTS_DIR     = "#{SOURCE_DIR}/layouts"
 LAST_BUILT = "./lastbuilt"
 
 def file_write(path, data)
-  File.makedirs(File.dirname(path))
+  FileUtils.makedirs(File.dirname(path))
   File.open(path, "w") { |f|  f << data}
 end
 
@@ -140,12 +142,12 @@ task :build do
     exit(0)
   end
 
-  File.makedirs(*DIRECTORIES)
+  FileUtils.makedirs(DIRECTORIES)
 
   puts "Source last changed: #{latest_modification_time}"
 
   puts "Deleting #{SITE_DIR}"
-  File.safe_unlink(SITE_DIR)
+  FileUtils.safe_unlink(SITE_DIR)
 
   puts "Copying #{ASSET_DIR}/. to #{SITE_DIR}"
   FileUtils.cp_r "#{ASSET_DIR}/.", SITE_DIR
