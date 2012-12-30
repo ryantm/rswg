@@ -1,4 +1,3 @@
-
 require 'yaml'
 require 'fileutils'
 
@@ -12,7 +11,7 @@ require 'sass/plugin'
 DIRECTORIES = []
 DIRECTORIES << SITE_DIR        = "./site"
 DIRECTORIES << ASSET_DIR       = "./assets"
-DIRECTORIES << SOURCE_DIR      = "./src" 
+DIRECTORIES << SOURCE_DIR      = "./src"
 DIRECTORIES << MODEL_DIR       = "#{SOURCE_DIR}/models"
 DIRECTORIES << PAGES_DIR       = "#{SOURCE_DIR}/pages"
 DIRECTORIES << STYLESHEETS_DIR = "#{PAGES_DIR}/stylesheets"
@@ -152,7 +151,7 @@ task :build do
   puts latest_modification_time.inspect
   if File.exists?(SITE_DIR) and File.exists?(LAST_BUILT) and File.mtime(LAST_BUILT) > latest_modification_time
     puts "Source unchanged since last build."
-    exit(0)
+    return
   end
 
   FileUtils.makedirs(DIRECTORIES)
