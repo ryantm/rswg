@@ -10,13 +10,13 @@ require 'sass/plugin'
 
 DIRECTORIES = []
 DIRECTORIES << SITE_DIR        = "./site"
-DIRECTORIES << ASSET_DIR       = "./assets"
 DIRECTORIES << SOURCE_DIR      = "./src"
-DIRECTORIES << MODEL_DIR       = "#{SOURCE_DIR}/models"
-DIRECTORIES << PAGES_DIR       = "#{SOURCE_DIR}/pages"
-DIRECTORIES << STYLESHEETS_DIR = "#{PAGES_DIR}/stylesheets"
-DIRECTORIES << PARTIALS_DIR    = "#{SOURCE_DIR}/partials"
-DIRECTORIES << LAYOUTS_DIR     = "#{SOURCE_DIR}/layouts"
+DIRECTORIES << ASSET_DIR       = File.join(SOURCE_DIR, "assets")
+DIRECTORIES << MODEL_DIR       = File.join(SOURCE_DIR, "models")
+DIRECTORIES << PAGES_DIR       = File.join(SOURCE_DIR, "pages")
+DIRECTORIES << STYLESHEETS_DIR = File.join(SOURCE_DIR, "stylesheets")
+DIRECTORIES << PARTIALS_DIR    = File.join(SOURCE_DIR, "partials")
+DIRECTORIES << LAYOUTS_DIR     = File.join(SOURCE_DIR, "layouts")
 
 LAST_BUILT = "./lastbuilt"
 
@@ -151,7 +151,7 @@ task :build do
   puts latest_modification_time.inspect
   if File.exists?(SITE_DIR) and File.exists?(LAST_BUILT) and File.mtime(LAST_BUILT) > latest_modification_time
     puts "Source unchanged since last build."
-    return
+    exit(0)
   end
 
   FileUtils.makedirs(DIRECTORIES)
@@ -223,7 +223,7 @@ task :update do
   system "rsync -avz #{SITE_DIR}/. nfs:/home/public"
 end
 
-desc "Run the Buld task every 1 second CTRL-C or CTRL-Break (Windows) to stop."
+desc "Run the Buld task then sleep 1 second CTRL-C or CTRL-Break (Windows) to stop."
 task :preview do
   while true do
     puts `rake build --trace`
