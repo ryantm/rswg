@@ -9,7 +9,8 @@ require 'sass'
 require 'sass/plugin'
 
 DIRECTORIES = []
-DIRECTORIES << SITE_DIR        = "./site"
+DIRECTORIES << RSWG_DIR        = "./.rswg"
+DIRECTORIES << SITE_DIR        = File.join(RSWG_DIR, "site")
 DIRECTORIES << SOURCE_DIR      = "./src"
 DIRECTORIES << ASSET_DIR       = File.join(SOURCE_DIR, "assets")
 DIRECTORIES << MODEL_DIR       = File.join(SOURCE_DIR, "models")
@@ -18,7 +19,7 @@ DIRECTORIES << STYLESHEETS_DIR = File.join(SOURCE_DIR, "stylesheets")
 DIRECTORIES << PARTIALS_DIR    = File.join(SOURCE_DIR, "partials")
 DIRECTORIES << LAYOUTS_DIR     = File.join(SOURCE_DIR, "layouts")
 
-LAST_BUILT = "./lastbuilt"
+LAST_BUILT = File.join(RSWG_DIR, "lastbuilt")
 
 def file_write(path, data)
   FileUtils.makedirs(File.dirname(path))
@@ -49,7 +50,7 @@ module Haml::Filters::EP
 end
 
 def build_page(src_loc, site_loc, local_page_url, locals={})
-  context = extended_context(site_loc.split("/").size - 3)
+  context = extended_context(site_loc.split("/").size - 4)
   locals  = locals.merge({:url => local_page_url}) unless locals.has_key? :url
 
   result = haml(File.read(src_loc), context, locals, {:filename=>src_loc})
@@ -72,17 +73,10 @@ def build_page(src_loc, site_loc, local_page_url, locals={})
   file_write(site_loc, result)
 end
 
-def should_skip?(source, destination, latest_modification_time)
-  File.exists?(destination) and
-    File.mtime(destination) > File.mtime(source) and
-    File.mtime(destination) > latest_modification_time
-end
-
 # The Exensions module is mixed in with every Haml context. In other words,
 # the methods defined in the Extensions module are available to Haml templates
 # while they are being processed.
 module Extensions
-
   attr_accessor :nesting
 
   def email
@@ -90,7 +84,7 @@ module Extensions
   end
 
   def dot_dot
-    "../"*nesting
+      "../"*nesting
   end
 
   def link_to(name,url,opts={})
@@ -133,7 +127,6 @@ module Extensions
   def model(name)
     YAML::load_file("#{MODEL_DIR}/#{name}.yaml")
   end
-
 end
 
 def extended_context(nesting)
@@ -146,25 +139,13 @@ desc "Build the site"
 task :default => :build
 task :build do
   start_time = Time.now
-
-  latest_modification_time = Dir["Rakefile", "#{SOURCE_DIR}/*", "#{SOURCE_DIR}/**/*", "#{ASSET_DIR}/*", "#{ASSET_DIR}/**/*"].map{|path| File.mtime(path)}.sort.reverse.first
-  puts latest_modification_time.inspect
-  if File.exists?(SITE_DIR) and File.exists?(LAST_BUILT) and File.mtime(LAST_BUILT) > latest_modification_time
-    puts "Source unchanged since last build."
-    exit(0)
-  end
-
   FileUtils.makedirs(DIRECTORIES)
-
-  puts "Source last changed: #{latest_modification_time}"
-
   puts "Deleting #{SITE_DIR}"
   FileUtils.safe_unlink(SITE_DIR)
-
   puts "Copying #{ASSET_DIR}/. to #{SITE_DIR}"
   FileUtils.cp_r "#{ASSET_DIR}/.", SITE_DIR
 
-  pages =  Dir["#{PAGES_DIR}/**/*.*", "#{PAGES_DIR}/*.*"]
+  pages =  Dir["#{PAGES_DIR}/**/*.*", "#{PAGES_DIR}/*.*", "#{STYLESHEETS_DIR}/*.*"]
   pages.each do |page_path|
     ext = File.extname(page_path)
     local_page_url = page_path.split("/").drop(3).join("/").chomp!(ext)
@@ -172,15 +153,12 @@ task :build do
     when ".haml"
       local_page_url += ".html" unless File.basename(local_page_url).include?(".")
       site_loc = "#{SITE_DIR}/#{local_page_url}"
-      next if should_skip?(page_path, site_loc, latest_modification_time)
       build_page(page_path, site_loc, local_page_url)
     when ".sass"
       local_page_url += ".css" unless File.basename(local_page_url).include?(".")
-      site_loc = "#{SITE_DIR}/#{local_page_url}"
-      next if should_skip?(page_path, site_loc, latest_modification_time)
-
+      site_loc = "#{SITE_DIR}/stylesheets/#{local_page_url}"
       context = extended_context(page_path.split("/").size - 4)
-      puts site_loc
+      puts "#{page_path} to #{site_loc}"
       file_write(site_loc, sass(File.read(page_path), context, {}, {:filename=>page_path}))
     when ".hatl"
       printed_template_path = false
@@ -192,8 +170,6 @@ task :build do
         if page_info["path"]
           local_page_url = File.dirname(page_path).split("/").drop(3).join("/") + "/#{page_info["path"]}/index.html"
           site_loc = "#{SITE_DIR}/#{local_page_url}"
-          next if should_skip?(page_path, site_loc, latest_modification_time)
-
           if !printed_template_path
             puts page_path
             printed_template_path = true
@@ -208,7 +184,6 @@ task :build do
     else
       puts "no processor for #{page_path}"
     end
-
   end
 
   puts "Build took #{Time.now-start_time} seconds."
@@ -223,10 +198,17 @@ task :update do
   system "rsync -avz #{SITE_DIR}/. nfs:/home/public"
 end
 
-desc "Run the Buld task then sleep 1 second CTRL-C or CTRL-Break (Windows) to stop."
+desc "Run the build task then sleep 1 second CTRL-C or CTRL-Break (Windows) to stop."
 task :preview do
   while true do
     puts `rake build --trace`
     sleep 1
   end
+end
+
+task :server do
+  require 'webrick'
+  server = WEBrick::HTTPServer.new :Port => 3000, :DocumentRoot => SITE_DIR
+  trap 'INT' do server.shutdown end
+  server.start
 end
