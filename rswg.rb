@@ -51,7 +51,7 @@ module Extensions
   end
 
   def link_to(name,url,opts={})
-    if url.index("http://") == 0
+    if url.index("http://") == 0 || url.index("https://") == 0
       href = url.strip
     else
       href = dot_dot+"#{url.strip}"
