@@ -71,6 +71,14 @@ module Extensions
     haml("%img#{hash}/")
   end
 
+  def youtube(code, wide=false)
+    if wide
+      haml("<iframe width='500' height='308' src='https://www.youtube.com/embed/#{code}' frameborder='0' allowfullscreen></iframe>")
+    else
+      haml("<iframe width='420' height='315' src='https://www.youtube.com/embed/#{code}' frameborder='0' allowfullscreen></iframe>")
+    end
+  end
+
   def render(opts={})
     p = opts.delete :partial
     filename = "#{SOURCE_DIR}/#{p}.html.haml"
