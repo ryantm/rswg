@@ -155,9 +155,15 @@ module RSWG
       when ".hatl"
         model_name = File.basename(page_path, ".hatl")
         model = YAML::load_file("#{MODEL_DIR}/#{model_name}.yaml")
+        model.zip(model.drop 1).each do |n, p|
+         n[:prev_model] = p
+         p[:next_model] = n unless p.nil?
+         n[:local_page_url] = File.dirname(page_path).split("/").drop(3).join("/") + "/#{n["path"]}/index.html"
+         n[:local_page_link_url] = File.dirname(page_path).split("/").drop(3).join("/") + "/#{n["path"]}"
+        end
         model.each do |page_info|
           if page_info["path"]
-            local_page_url = File.dirname(page_path).split("/").drop(3).join("/") + "/#{page_info["path"]}/index.html"
+            local_page_url = page_info[:local_page_url]
             site_loc = "#{SITE_DIR}/#{local_page_url}"
             build_page(page_path, site_loc, local_page_url, page_info)
           else
