@@ -147,6 +147,10 @@ module RSWG
 
     Dir["#{PAGES_DIR}/**/*.*"].each do |page_path|
       ext = File.extname(page_path)
+      next if page_path.start_with? "./src/pages/blog" and
+        !(ext.include? "hatl" or
+          page_path.start_with? "./src/pages/blog/archives/")
+
       local_page_url = page_path.split("/").drop(3).join("/").chomp!(ext)
       case ext
       when ".haml", ".sass", ".scss"
