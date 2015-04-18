@@ -1,5 +1,4 @@
 require_relative 'rswg'
-require 'guard'
 
 desc "Build the site"
 task :default => :build
