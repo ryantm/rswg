@@ -149,7 +149,8 @@ module RSWG
       ext = File.extname(page_path)
       next if page_path.start_with? "./src/pages/blog" and
         !(ext.include? "hatl" or
-          page_path.start_with? "./src/pages/blog/archives/")
+          page_path.start_with? "./src/pages/blog/archives/" or
+          page_path.start_with? "./src/pages/blog/rss.xml.haml")
 
       local_page_url = page_path.split("/").drop(3).join("/").chomp!(ext)
       case ext
