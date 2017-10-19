@@ -95,6 +95,10 @@ module Extensions
     haml("%link{:href=>'#{dot_dot+"stylesheets/#{name}.css"}', :media=>'screen', :rel=>'stylesheet', :type=>'text/css'}/")
   end
 
+  def javascript_tag(name)
+    haml("%script{src: '#{dot_dot+"javascripts/#{name}"}'}")
+  end
+
   def model(name)
     YAML::load_file("#{MODEL_DIR}/#{name}.yaml")
   end
